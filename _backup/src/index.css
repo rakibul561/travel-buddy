@@ -1,0 +1,52 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-sage: #8B9D83;
+  --color-beige: #E8DCC4;
+  --color-terracotta: #C17B5C;
+  --color-cream: #FAF7F2;
+  --color-charcoal: #2C2C2C;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  color: var(--color-charcoal);
+  background-color: var(--color-cream);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Playfair Display', serif;
+}
+
+.font-serif {
+  font-family: 'Playfair Display', serif;
+}
+
+.font-sans {
+  font-family: 'Inter', sans-serif;
+}
+
+/* Custom Utilities */
+.text-sage { color: var(--color-sage); }
+.bg-sage { background-color: var(--color-sage); }
+.border-sage { border-color: var(--color-sage); }
+
+.text-beige { color: var(--color-beige); }
+.bg-beige { background-color: var(--color-beige); }
+.border-beige { border-color: var(--color-beige); }
+
+.text-terracotta { color: var(--color-terracotta); }
+.bg-terracotta { background-color: var(--color-terracotta); }
+.border-terracotta { border-color: var(--color-terracotta); }
+
+.text-cream { color: var(--color-cream); }
+.bg-cream { background-color: var(--color-cream); }
+
+.text-charcoal { color: var(--color-charcoal); }
