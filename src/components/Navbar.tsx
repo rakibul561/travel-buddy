@@ -61,13 +61,19 @@ export function Navbar() {
 
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center gap-8">
-          {navLinks.map((link) =>
+          {navLinks.map((link) => (
             <Link
               key={link.name}
               href={link.href}
               className={`text-sm font-medium transition-colors hover:text-[#C17B5C] ${pathname === link.href ? 'text-[#C17B5C]' : 'text-[#2C2C2C]'}`}>
-
               {link.name}
+            </Link>
+          ))}
+          {isAuthenticated && (
+            <Link
+              href={user?.role === 'ADMIN' ? '/admin/dashboard' : '/dashboard'}
+              className={`text-sm font-medium transition-colors hover:text-[#C17B5C] ${pathname.includes('dashboard') ? 'text-[#C17B5C]' : 'text-[#2C2C2C]'}`}>
+              Dashboard
             </Link>
           )}
         </div>
@@ -75,16 +81,9 @@ export function Navbar() {
         {/* Auth Buttons */}
         <div className="hidden md:flex items-center gap-4">
           {isAuthenticated ? (
-            <>
-              <Link href={user?.role === 'ADMIN' ? '/admin/dashboard' : '/dashboard'}>
-                <Button variant="outline" className="text-sm">
-                  Dashboard
-                </Button>
-              </Link>
-              <Button variant="primary" onClick={logout} className="text-sm">
-                Log Out
-              </Button>
-            </>
+            <Button variant="primary" onClick={logout} className="text-sm">
+              Log Out
+            </Button>
           ) : (
             <>
               <Link href="/login">

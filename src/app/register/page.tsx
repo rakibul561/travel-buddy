@@ -7,6 +7,7 @@ import { TravelButton as Button } from '@/components/ui/TravelButton';
 import { Footer } from '@/components/Footer';
 import api from '@/lib/api';
 import { useRouter } from 'next/navigation';
+import { authService } from '@/services/auth.service';
 export default function RegisterPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({
@@ -49,11 +50,7 @@ export default function RegisterPage() {
         role: 'USER' // Default role
       }));
 
-      const response = await api.post('/users/register', data, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        }
-      });
+      const response = await authService.register(data);
 
       if (response.data.success) {
         // Redirect to login or auto-login

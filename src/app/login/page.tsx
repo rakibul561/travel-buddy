@@ -8,6 +8,7 @@ import { Footer } from '@/components/Footer';
 import { useAuth } from '@/context/AuthContext';
 import api from '@/lib/api';
 import Cookies from 'js-cookie';
+import { authService } from '@/services/auth.service';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -26,7 +27,7 @@ export default function LoginPage() {
       // This is important because our api interceptor adds the token if it exists
       Cookies.remove('accessToken');
 
-      const response = await api.post('/auth/login', { email, password });
+      const response = await authService.login({ email, password });
 
       console.log("Login Response:", response.data); // Debugging
 

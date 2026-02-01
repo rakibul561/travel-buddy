@@ -1,6 +1,8 @@
 "use client";
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '@/lib/api';
+import { userService } from '@/services/user.service';
+import { authService } from '@/services/auth.service';
 import Cookies from 'js-cookie';
 import { jwtDecode } from 'jwt-decode';
 import { useRouter } from 'next/navigation';
@@ -35,15 +37,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 try {
                     // First try to decode the token to get basic info immediately
                     const decoded: any = jwtDecode(token);
-                    // Ensure decoded has necessary fields or fallback
 
                     // Then fetch full profile
-                    const response = await api.get('/users/me');
+                    const response = await userService.getMe();
                     if (response.data?.data) {
                         setUser(response.data.data);
                     } else if (decoded) {
-                        // Fallback if /me fails but token is valid ?? 
-                        // Ideally we want fresh data.
                         setUser({
                             id: decoded.id || decoded._id,
                             name: decoded.name,
@@ -54,8 +53,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
                 } catch (error) {
                     console.error('Failed to fetch user profile:', error);
-                    Cookies.remove('accessToken');
-                    setUser(null);
+                    // Don't remove cookie immediately if just network error, but if 401 yes.
+                    // The api interceptor already handles 401. 
+                    // So we might just want to set user from decoded if API fails but token looks valid?
+                    // But if API fails, we probably shouldn't trust the session.
+                    // For now, let's NOT remove the cookie here blindly. 
+                    // Cookies.remove('accessToken'); 
+                    // setUser(null);
+                    const decoded: any = jwtDecode(token);
+                    if (decoded) {
+                        setUser({
+                            id: decoded.id || decoded._id,
+                            name: decoded.name,
+                            email: decoded.email,
+                            role: decoded.role,
+                        } as User);
+                    }
                 }
             }
             setLoading(false);
@@ -89,7 +102,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             })
     };
 
-    const logout = () => {
+    const logout = async () => {
+        try {
+            await authService.logout();
+        } catch (error) {
+            console.error("Logout failed on server:", error);
+        }
         Cookies.remove('accessToken');
         setUser(null);
         router.push('/login');
