@@ -8,11 +8,8 @@ export const authService = {
     register: async (userData: any) => {
         // Expects FormData for file upload or JSON if no file
         // But based on Postman, it sends FormData with 'file' and 'data' (JSON string)
-        return api.post('/users/register', userData, {
-            headers: {
-                'Content-Type': 'multipart/form-data',
-            }
-        });
+
+        return api.post('/users/register', userData);
     },
 
     logout: async () => {

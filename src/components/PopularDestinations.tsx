@@ -1,52 +1,56 @@
 "use client";
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { DestinationCard } from './DestinationCard';
 import { TravelButton as Button } from './ui/TravelButton';
+import { travelService } from '@/services/travel.service';
+import Link from 'next/link';
+
 export function PopularDestinations() {
-  const destinations = [
-    {
-      id: 1,
-      location: 'Kyoto, Japan',
-      description: 'Ancient traditions and serene temples.',
-      image:
-        'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?q=80&w=1000&auto=format&fit=crop'
-    },
-    {
-      id: 2,
-      location: 'Santorini, Greece',
-      description: 'Stunning sunsets and white-washed architecture.',
-      image:
-        'https://images.unsplash.com/photo-1613395877344-13d4c79e4284?q=80&w=1000&auto=format&fit=crop'
-    },
-    {
-      id: 3,
-      location: 'Marrakech, Morocco',
-      description: 'Vibrant colors, spices, and historic Medina.',
-      image:
-        'https://images.unsplash.com/photo-1597212618439-4f2f9537d87b?q=80&w=1000&auto=format&fit=crop'
-    },
-    {
-      id: 4,
-      location: 'Reykjavik, Iceland',
-      description: 'Northern lights and dramatic landscapes.',
-      image:
-        'https://images.unsplash.com/photo-1476610182048-b716b8518aae?q=80&w=1000&auto=format&fit=crop'
-    },
-    {
-      id: 5,
-      location: 'Bali, Indonesia',
-      description: 'Tropical paradise with rich culture.',
-      image:
-        'https://images.unsplash.com/photo-1537996194471-e657df975ab4?q=80&w=1000&auto=format&fit=crop'
-    },
-    {
-      id: 6,
-      location: 'Patagonia, Chile',
-      description: 'Untamed wilderness for true adventurers.',
-      image:
-        'https://images.unsplash.com/photo-1518182170546-0766bc6f9213?q=80&w=1000&auto=format&fit=crop'
-    }];
+  const [destinations, setDestinations] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDestinations = async () => {
+      try {
+        const response = await travelService.getAllTravelPlans({
+          limit: 6,
+          // Assuming we want the latest or trending. 
+          // If backend supports 'trending', use that. Otherwise specific sort.
+          sortBy: 'startDate',
+          sortOrder: 'asc'
+        });
+        const plans = response.data.data?.data || response.data.data || [];
+
+        // Map plans to destination format
+        // We use destination as location, description as description, image as image
+        const mappedDestinations = plans.map((plan: any) => ({
+          id: plan.id,
+          location: `${plan.destination}, ${plan.country}`,
+          description: plan.description ? plan.description.substring(0, 60) + "..." : "Explore this amazing destination.",
+          image: plan.image || 'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?q=80&w=2070&auto=format&fit=crop'
+        }));
+        setDestinations(mappedDestinations);
+      } catch (error) {
+        console.error("Failed to fetch popular destinations", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDestinations();
+  }, []);
+
+  if (loading) {
+    return (
+      <section className="py-24 px-6 max-w-7xl mx-auto flex justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#C17B5C]"></div>
+      </section>
+    );
+  }
+
+  // If no data, maybe show static or nothing? Let's show nothing or a message.
+  if (destinations.length === 0) return null;
 
   return (
     <section className="py-24 px-6 max-w-7xl mx-auto">
@@ -92,9 +96,11 @@ export function PopularDestinations() {
           }}
           className="hidden md:block">
 
-          <Button variant="outline" withIcon>
-            View All
-          </Button>
+          <Link href="/travel-plans">
+            <Button variant="outline" withIcon>
+              View All
+            </Button>
+          </Link>
         </motion.div>
       </div>
 
@@ -106,15 +112,15 @@ export function PopularDestinations() {
             location={dest.location}
             description={dest.description}
             delay={index * 0.1} />
-
         )}
       </div>
 
       <div className="mt-12 text-center md:hidden">
-        <Button variant="outline" withIcon>
-          View All Destinations
-        </Button>
+        <Link href="/travel-plans">
+          <Button variant="outline" withIcon>
+            View All Destinations
+          </Button>
+        </Link>
       </div>
     </section>);
-
 }

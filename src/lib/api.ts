@@ -31,10 +31,12 @@ api.interceptors.response.use(
     (response) => {
         return response;
     },
+
     async (error) => {
         if (error.response && error.response.status === 401) {
             // Handle logout or refresh token logic here
-            Cookies.remove('accessToken');
+            // Cookies.remove('accessToken'); // DISABLE AUTOMATIC REMOVAL for debugging/robustness
+            console.warn("API 401 Unauthorized:", error.config.url);
             // window.location.href = '/login'; // Optional: Redirect to login
         }
         return Promise.reject(error);

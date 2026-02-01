@@ -1,17 +1,24 @@
+
 "use client";
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Filter, MapPin } from 'lucide-react';
+import { Search, Filter } from 'lucide-react';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { TravelerCard } from '@/components/TravelerCard';
 import { TravelButton as Button } from '@/components/ui/TravelButton';
 import api from '@/lib/api';
 import { TravelPlanCard } from '@/components/TravelPlanCard';
+import { userService } from '@/services/user.service';
+import { followService } from '@/services/follow.service';
+import { useAuth } from '@/context/AuthContext';
 
 export default function ExplorePage() {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'plans' | 'travelers'>('plans');
   const [travelPlans, setTravelPlans] = useState<any[]>([]);
+  const [travelers, setTravelers] = useState<any[]>([]);
+  const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -26,7 +33,23 @@ export default function ExplorePage() {
         const res = await api.get(`/travel-plans?search=${searchTerm}`);
         setTravelPlans(res.data.data.data || []);
       } else {
-        // Fetch travelers if endpoint exists
+        // Fetch all users
+        const [usersRes, followingRes] = await Promise.all([
+          userService.getAllUsers(),
+          user ? followService.getFollowing() : Promise.resolve({ data: { data: [] } })
+        ]);
+
+        const allUsers = usersRes.data.data?.data || usersRes.data.data || [];
+        // Filter out self
+        const otherUsers = user ? allUsers.filter((u: any) => u.id !== user.id) : allUsers;
+        setTravelers(otherUsers);
+
+        // Create a Set of IDs that the current user receives as 'following'
+        // The API returns an array of objects which contain 'followingId'
+        const followingList = followingRes.data?.data || [];
+
+        const ids = new Set<string>(followingList.map((f: any) => f.followingId as string));
+        setFollowingIds(ids);
       }
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -38,7 +61,32 @@ export default function ExplorePage() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     fetchData();
-  }
+  };
+
+  const handleFollowToggle = async (targetId: string) => {
+    try {
+      if (followingIds.has(targetId)) {
+        // Unfollow
+        await followService.unfollowUser(targetId);
+        setFollowingIds(prev => {
+          const next = new Set(prev);
+          next.delete(targetId);
+          return next;
+        });
+      } else {
+        // Follow
+        await followService.followUser(targetId);
+        setFollowingIds(prev => {
+          const next = new Set(prev);
+          next.add(targetId);
+          return next;
+        });
+      }
+    } catch (error) {
+      console.error("Failed to toggle follow:", error);
+      alert("Failed to update follow status.");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#FAF7F2]">
@@ -117,7 +165,7 @@ export default function ExplorePage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {activeTab === 'plans' ?
-                travelPlans.map((plan: any, i) => (
+                (travelPlans.map((plan: any, i) => (
                   <TravelPlanCard
                     key={plan.id}
                     id={plan.id}
@@ -131,9 +179,28 @@ export default function ExplorePage() {
                     hostImage={undefined}
                     delay={i * 0.1}
                   />
-                )) :
-                <div className="col-span-3 text-center text-gray-500">Traveler search coming soon!</div>
-              }
+                ))) : (
+                  travelers.length > 0 ? (
+                    travelers.map((traveler: any, i) => (
+                      <TravelerCard
+                        key={traveler.id}
+                        id={traveler.id}
+                        name={traveler.name || 'Traveler'}
+                        image={traveler.profilePicture || "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=1000&auto=format&fit=crop"}
+                        location={traveler.country || "Global Citizen"}
+                        rating={5} // Mock
+                        reviewCount={1} // Mock
+                        countriesVisited={1} // Mock
+                        interests={["Travel", "Adventure"]} // Mock
+                        delay={i * 0.1}
+                        isFollowing={followingIds.has(traveler.id)}
+                        onFollowToggle={handleFollowToggle}
+                      />
+                    ))
+                  ) : (
+                    <div className="col-span-3 text-center text-gray-500">No travelers found.</div>
+                  )
+                )}
             </div>
           )}
         </div>

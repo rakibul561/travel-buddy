@@ -1,12 +1,9 @@
 import api from '@/lib/api';
 
 export const travelService = {
+
     createTravelPlan: async (formData: FormData) => {
-        return api.post('/travel-plans', formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data',
-            }
-        });
+        return api.post('/travel-plans', formData);
     },
 
     getAllTravelPlans: async (query?: { search?: string; travelType?: string; page?: number; limit?: number; sortBy?: string; sortOrder?: string }) => {
@@ -29,7 +26,12 @@ export const travelService = {
         });
     },
 
+
     markAsComplete: async () => {
         return api.get('/travel-plans/complete');
+    },
+
+    deleteTravelPlan: async (id: string) => {
+        return api.delete(`/travel-plans/${id}`);
     }
 };

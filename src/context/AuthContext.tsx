@@ -51,55 +51,87 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                         } as User)
                     }
 
+
                 } catch (error) {
                     console.error('Failed to fetch user profile:', error);
-                    // Don't remove cookie immediately if just network error, but if 401 yes.
-                    // The api interceptor already handles 401. 
-                    // So we might just want to set user from decoded if API fails but token looks valid?
-                    // But if API fails, we probably shouldn't trust the session.
-                    // For now, let's NOT remove the cookie here blindly. 
-                    // Cookies.remove('accessToken'); 
-                    // setUser(null);
-                    const decoded: any = jwtDecode(token);
-                    if (decoded) {
-                        setUser({
-                            id: decoded.id || decoded._id,
-                            name: decoded.name,
-                            email: decoded.email,
-                            role: decoded.role,
-                        } as User);
+                    // If API fails, try to survive with just the token
+                    try {
+                        const decoded: any = jwtDecode(token);
+                        if (decoded) {
+                            setUser({
+                                id: decoded.id || decoded._id,
+                                name: decoded.name,
+                                email: decoded.email,
+                                role: decoded.role,
+                            } as User);
+                        }
+                    } catch (decodeErr) {
+                        console.error("Token decode fallback failed", decodeErr);
+                        // precise removal only if really garbage
+                        Cookies.remove('accessToken');
                     }
                 }
             }
             setLoading(false);
         };
 
+
         initAuth();
     }, []);
 
+
     const login = (token: string) => {
-        Cookies.set('accessToken', token, { expires: 7 }); // Expires in 7 days
-        const decoded: any = jwtDecode(token);
-        // You might want to fetch the full user object here too
+        // Explicitly set path to '/' to ensure it's available across the entire app
+        Cookies.set('accessToken', token, { expires: 7, path: '/' });
+
+        let decoded: any = null;
+        try {
+            decoded = jwtDecode(token);
+        } catch (e) {
+            console.error("Token decode failed", e);
+        }
+
+        // Optimistically set user from token if possible to avoid delay
+        if (decoded) {
+            setUser({
+                id: decoded.id || decoded._id,
+                name: decoded.name,
+                email: decoded.email,
+                role: decoded.role,
+            });
+        }
+
+        // Fetch full profile for up-to-date info
         api.get('/users/me')
             .then(res => {
-                setUser(res.data.data);
-                if (res.data.data.role === 'ADMIN') {
-                    router.push('/admin/dashboard');
-                } else {
-                    router.push('/dashboard');
+                if (res.data.data) {
+                    setUser(res.data.data);
+
+                    const role = res.data.data.role?.toUpperCase();
+                    if (role === 'ADMIN') {
+                        router.push('/');
+                    } else {
+                        router.push('/dashboard');
+                    }
                 }
             })
-            .catch(() => {
-                // Fallback
-                setUser({
-                    id: decoded.id || decoded._id,
-                    name: decoded.name,
-                    email: decoded.email,
-                    role: decoded.role,
-                } as User);
-                router.push('/dashboard');
-            })
+            .catch((err) => {
+                console.error("Fetch user failed during login", err);
+                // If fetching me fails but we have a token, we rely on the decoded token
+                // logic above. We still redirect.
+                if (decoded) {
+                    const role = decoded.role?.toUpperCase();
+                    if (role === 'ADMIN') {
+                        router.push('/');
+                    } else {
+                        router.push('/dashboard');
+                    }
+
+                } else {
+                    // Critical failure
+                    console.error("Login failed: Invalid token data.");
+                }
+            });
     };
 
     const logout = async () => {

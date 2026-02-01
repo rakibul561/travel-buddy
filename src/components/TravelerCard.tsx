@@ -1,9 +1,11 @@
-"use client";
-import React from 'react';
+
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { MapPin, Star, Globe } from 'lucide-react';
+import { MapPin, Star, Globe, UserPlus, UserCheck } from 'lucide-react';
 import { TravelButton as Button } from './ui/TravelButton';
 import Link from 'next/link';
+import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
 
 interface TravelerCardProps {
   id: string;
@@ -15,6 +17,8 @@ interface TravelerCardProps {
   interests: string[];
   countriesVisited: number;
   delay?: number;
+  isFollowing?: boolean;
+  onFollowToggle?: (id: string) => Promise<void>;
 }
 
 export function TravelerCard({
@@ -26,8 +30,39 @@ export function TravelerCard({
   reviewCount,
   interests,
   countriesVisited,
-  delay = 0
+  delay = 0,
+  isFollowing = false,
+  onFollowToggle
 }: TravelerCardProps) {
+  const { isAuthenticated } = useAuth();
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [followed, setFollowed] = useState(isFollowing);
+
+  // Sync internal state if prop changes (optional, but good for reliable updates)
+  React.useEffect(() => {
+    setFollowed(isFollowing);
+  }, [isFollowing]);
+
+  const handleConnect = async () => {
+    if (!isAuthenticated) {
+      router.push('/login');
+      return;
+    }
+
+    if (!onFollowToggle) return;
+
+    try {
+      setLoading(true);
+      await onFollowToggle(id);
+      setFollowed(!followed);
+    } catch (error) {
+      console.error('Error toggling follow:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <motion.div
       initial={{
@@ -99,11 +134,25 @@ export function TravelerCard({
               View Profile
             </Button>
           </Link>
-          <Button variant="primary" className="w-full text-xs py-2 px-0">
-            Connect
+          <Button
+            variant={followed ? 'outline' : 'primary'}
+            className={`w-full text-xs py-2 px-0 flex items-center justify-center gap-1 ${followed ? 'bg-gray-100 text-gray-700 border-gray-300' : ''}`}
+            onClick={handleConnect}
+            disabled={loading}
+          >
+            {loading ? (
+              <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+            ) : followed ? (
+              <>
+                <UserCheck size={14} /> Following
+              </>
+            ) : (
+              <>
+                <UserPlus size={14} /> Connect
+              </>
+            )}
           </Button>
         </div>
       </div>
     </motion.div>);
-
 }

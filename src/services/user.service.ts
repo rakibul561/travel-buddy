@@ -13,13 +13,10 @@ export const userService = {
         return api.get(`/users/${id}`);
     },
 
+
     updateProfile: async (formData: FormData) => {
         // Postman: PATCH /users/profile with FormData (file, data)
-        return api.patch('/users/profile', formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data',
-            }
-        });
+        return api.patch('/users/profile', formData);
     },
 
     deleteUser: async (id: string) => {

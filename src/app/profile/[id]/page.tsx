@@ -1,16 +1,103 @@
+
 "use client";
-import React from 'react';
-import { useParams } from 'next/navigation';
+import React, { useState, useEffect } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { MapPin, Calendar, Globe, Star, Edit2, Share2 } from 'lucide-react';
+import { MapPin, Calendar, Globe, Star, Edit2, Share2, UserPlus, UserCheck, Users } from 'lucide-react';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { TravelButton as Button } from '@/components/ui/TravelButton';
 import { ReviewCard } from '@/components/ReviewCard';
+import { followService } from '@/services/follow.service';
+import { useAuth } from '@/context/AuthContext';
+import { userService } from '@/services/user.service';
+
 export default function ProfilePage() {
   const params = useParams();
-  const id = params?.id;
-  const isOwnProfile = !id || id === 'me';
+  const router = useRouter();
+  const id = params?.id as string;
+  const { user, isAuthenticated } = useAuth();
+
+  const [profileData, setProfileData] = useState<any>(null);
+  const [followStats, setFollowStats] = useState({ followers: 0, following: 0 });
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
+
+  const isOwnProfile = isAuthenticated && (id === 'me' || id === user?.id);
+  const profileId = isOwnProfile ? user?.id : id;
+
+  useEffect(() => {
+
+    const fetchProfileData = async () => {
+      if (!profileId) return;
+
+      try {
+        setLoading(true);
+
+        // 1. Fetch User Data
+        const userRes = await userService.getUserById(profileId);
+        const userData = userRes.data.data?.data || userRes.data.data || userRes.data;
+        setProfileData(userData);
+
+        // 2. Fetch Follow Status (if logged in and not own profile)
+        if (isAuthenticated && user && !isOwnProfile) {
+          try {
+            const followingRes = await followService.getFollowing();
+            const followingList = followingRes.data.data || [];
+            // Check if this profileId is in my following list
+            // API response structure: [ { id: "...", followingId: "targetId", ... } ]
+            const isF = followingList.some((f: any) => f.followingId === profileId);
+            setIsFollowing(isF);
+          } catch (err) {
+            console.error("Failed to check follow status", err);
+          }
+        }
+
+        // Mock stats for now as backend doesn't provide them
+        setFollowStats({ followers: 12, following: 34 });
+
+      } catch (error) {
+        console.error("Error fetching profile:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfileData();
+  }, [profileId, user]);
+
+  const handleConnect = async () => {
+    if (!isAuthenticated) {
+      router.push('/login');
+      return;
+    }
+
+    if (!profileId) return;
+
+    try {
+      setActionLoading(true);
+      if (isFollowing) {
+        await followService.unfollowUser(profileId);
+        setIsFollowing(false);
+        setFollowStats(prev => ({ ...prev, followers: Math.max(0, prev.followers - 1) }));
+      } else {
+        await followService.followUser(profileId);
+        setIsFollowing(true);
+        setFollowStats(prev => ({ ...prev, followers: prev.followers + 1 }));
+      }
+    } catch (error) {
+      console.error("Failed to toggle follow:", error);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Fallback for display
+  const displayName = profileData?.name || 'Traveler';
+  const displayImage = profileData?.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=random`;
+  const displayLocation = profileData?.address || 'Global Citizen';
+
   return (
     <div className="min-h-screen bg-[#FAF7F2]">
       <Navbar />
@@ -37,28 +124,33 @@ export default function ProfilePage() {
             <div className="relative flex flex-col md:flex-row items-start md:items-end gap-6 mb-8">
               <div className="w-32 h-32 rounded-full border-4 border-white shadow-lg overflow-hidden bg-gray-200 shrink-0">
                 <img
-                  src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=400&auto=format&fit=crop"
+                  src={displayImage}
                   alt="Profile"
                   className="w-full h-full object-cover" />
-
               </div>
 
-              <div className="flex-1 pt-2">
+              <div className="flex-1 pt-2 w-full">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                   <div>
                     <h1 className="text-3xl font-serif text-[#2C2C2C] mb-2">
-                      Elena Rodriguez
+                      {displayName}
                     </h1>
-                    <div className="flex flex-wrap gap-4 text-sm text-[#2C2C2C]/60">
+                    <div className="flex flex-wrap gap-4 text-sm text-[#2C2C2C]/60 mb-2">
                       <span className="flex items-center">
-                        <MapPin className="w-4 h-4 mr-1" /> Madrid, Spain
+                        <MapPin className="w-4 h-4 mr-1" /> {displayLocation}
                       </span>
                       <span className="flex items-center">
                         <Globe className="w-4 h-4 mr-1" /> 12 Countries Visited
                       </span>
-                      <span className="flex items-center text-[#C17B5C] font-medium">
-                        <Star className="w-4 h-4 mr-1 fill-current" /> 4.9 (24
-                        Reviews)
+                    </div>
+                    {/* Follower Stats */}
+                    <div className="flex items-center gap-4 text-sm font-medium">
+                      <span className="flex items-center text-[#2C2C2C]">
+                        <Users className="w-4 h-4 mr-1 text-[#C17B5C]" />
+                        <strong>{followStats.followers}</strong>&nbsp;Followers
+                      </span>
+                      <span className="text-[#2C2C2C]">
+                        <strong>{followStats.following}</strong>&nbsp;Following
                       </span>
                     </div>
                   </div>
@@ -71,8 +163,24 @@ export default function ProfilePage() {
 
                         <Edit2 className="w-4 h-4" /> Edit Profile
                       </Button> :
-
-                      <Button variant="primary">Connect</Button>
+                      <Button
+                        variant={isFollowing ? 'outline' : 'primary'}
+                        onClick={handleConnect}
+                        disabled={actionLoading}
+                        className="min-w-[120px]"
+                      >
+                        {actionLoading ? (
+                          <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mx-auto" />
+                        ) : isFollowing ? (
+                          <>
+                            <UserCheck className="w-4 h-4 mr-2" /> Following
+                          </>
+                        ) : (
+                          <>
+                            <UserPlus className="w-4 h-4 mr-2" /> Connect
+                          </>
+                        )}
+                      </Button>
                     }
                     <button className="p-3 rounded-full border border-[#E8DCC4] hover:bg-[#FAF7F2] transition-colors text-[#2C2C2C]/60">
                       <Share2 className="w-4 h-4" />
@@ -89,11 +197,7 @@ export default function ProfilePage() {
                     About Me
                   </h2>
                   <p className="text-[#2C2C2C]/70 leading-relaxed font-light">
-                    Hi! I'm an art historian and avid traveler. I love exploring
-                    ancient ruins, trying local street food, and capturing
-                    moments through my camera lens. Looking for travel buddies
-                    who enjoy a mix of cultural exploration and relaxation. I
-                    speak English, Spanish, and a bit of French.
+                    {profileData?.bio || "Hi! I'm an avid traveler. I love exploring new places and meeting new people."}
                   </p>
                 </section>
 

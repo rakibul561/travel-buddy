@@ -61,6 +61,7 @@ export function Navbar() {
 
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center gap-8">
+
           {navLinks.map((link) => (
             <Link
               key={link.name}
@@ -71,9 +72,9 @@ export function Navbar() {
           ))}
           {isAuthenticated && (
             <Link
-              href={user?.role === 'ADMIN' ? '/admin/dashboard' : '/dashboard'}
+              href={user?.role?.toUpperCase() === 'ADMIN' ? '/admin/dashboard' : '/dashboard'}
               className={`text-sm font-medium transition-colors hover:text-[#C17B5C] ${pathname.includes('dashboard') ? 'text-[#C17B5C]' : 'text-[#2C2C2C]'}`}>
-              Dashboard
+              {user?.role?.toUpperCase() === 'ADMIN' ? 'Admin Dashboard' : 'Dashboard'}
             </Link>
           )}
         </div>
@@ -151,8 +152,13 @@ export function Navbar() {
               <hr className="border-[#E8DCC4]" />
               {isAuthenticated ? (
                 <>
-                  <Link href="/dashboard" onClick={() => setIsMobileMenuOpen(false)} className="block text-[#2C2C2C] font-medium hover:text-[#C17B5C]">
-                    Dashboard
+
+                  <Link
+                    href={user?.role?.toUpperCase() === 'ADMIN' ? '/admin/dashboard' : '/dashboard'}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="block text-[#2C2C2C] font-medium hover:text-[#C17B5C]"
+                  >
+                    {user?.role?.toUpperCase() === 'ADMIN' ? 'Admin Dashboard' : 'Dashboard'}
                   </Link>
                   <button onClick={() => { logout(); setIsMobileMenuOpen(false); }} className="block w-full text-left text-[#C17B5C] font-medium">
                     Log Out

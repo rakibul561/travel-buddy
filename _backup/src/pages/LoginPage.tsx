@@ -41,7 +41,8 @@ export function LoginPage() {
               <input
                 type="email"
                 className="w-full px-4 py-3 rounded-lg bg-[#FAF7F2] border border-[#E8DCC4] focus:border-[#8B9D83] focus:ring-1 focus:ring-[#8B9D83] outline-none transition-all"
-                placeholder="you@example.com" />
+                placeholder="you@example.com"
+              />
 
             </div>
 
@@ -57,7 +58,8 @@ export function LoginPage() {
               <input
                 type="password"
                 className="w-full px-4 py-3 rounded-lg bg-[#FAF7F2] border border-[#E8DCC4] focus:border-[#8B9D83] focus:ring-1 focus:ring-[#8B9D83] outline-none transition-all"
-                placeholder="••••••••" />
+                placeholder="••••••••"
+              />
 
             </div>
 
